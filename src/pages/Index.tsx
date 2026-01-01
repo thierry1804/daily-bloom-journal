@@ -31,7 +31,7 @@ const Index = () => {
         <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 lg:p-8">
           <div className="max-w-3xl mx-auto w-full">
             <p className="text-sm font-medium text-primary-foreground/80">{formattedDate}</p>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-semibold text-primary-foreground">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-semibold text-primary-foreground mb-4 sm:mb-6 md:mb-8">
               {greeting}
             </h1>
           </div>
