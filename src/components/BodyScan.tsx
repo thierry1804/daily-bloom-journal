@@ -138,21 +138,39 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
       // Paramètres optimisés pour une voix très humaine et apaisante (soothing)
       utterance.rate = 0.75;  // Vitesse encore plus lente pour un rythme très calme et naturel
       utterance.pitch = 0.88;  // Pitch plus bas pour un ton très chaleureux et apaisant
-      utterance.volume = 0.92; // Volume légèrement réduit pour plus de douceur
+      utterance.volume = 1.0; // Volume maximum pour être sûr que la voix est audible
       
       // Utiliser la meilleure voix disponible
       if (selectedVoiceRef.current) {
         utterance.voice = selectedVoiceRef.current;
         console.log("Utilisation de la voix apaisante:", selectedVoiceRef.current.name);
+      } else {
+        console.log("Aucune voix sélectionnée, utilisation de la voix par défaut");
       }
+      
+      // Baisser le volume de la musique pendant que la voix parle
+      if (audioRef.current) {
+        audioRef.current.volume = 0.1; // Volume très bas pendant la voix
+      }
+      
+      // Remettre le volume de la musique après la fin de la voix
+      utterance.onend = () => {
+        if (audioRef.current) {
+          audioRef.current.volume = 0.3; // Remettre le volume normal
+        }
+      };
+      
+      utterance.onerror = (event) => {
+        console.error("Erreur de synthèse vocale:", event);
+      };
       
       speechSynthesisRef.current = utterance;
       
-      // Lire avec un petit délai pour s'assurer que la musique est lancée
-      // et permettre une transition plus douce
-      setTimeout(() => {
-        window.speechSynthesis.speak(utterance);
-      }, 400);
+      // Lire immédiatement (pas de délai)
+      console.log("Lecture de l'instruction:", naturalText);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.error("La synthèse vocale n'est pas disponible dans ce navigateur");
     }
   };
 
@@ -307,6 +325,8 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
     if (isRunning && !isWaitingForVoice && currentIndex < bodyParts.length) {
       const currentPart = bodyParts[currentIndex];
       const fullInstruction = `${currentPart.name}. ${currentPart.instruction}`;
+      console.log("Démarrage de la lecture vocale pour:", fullInstruction);
+      console.log("Voix disponible:", selectedVoiceRef.current?.name || "aucune");
       speakInstruction(fullInstruction);
     }
   }, [currentIndex, isRunning, isWaitingForVoice]);
@@ -360,10 +380,19 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
     }
     
     voiceStartTimeoutRef.current = setTimeout(() => {
+      console.log("30 secondes écoulées, démarrage du guide vocal");
       setIsWaitingForVoice(false);
       setCurrentIndex(0);
       setTimeRemaining(bodyParts[0].duration);
       setIsRunning(true);
+      
+      // Lire la première instruction immédiatement après le délai
+      setTimeout(() => {
+        const firstPart = bodyParts[0];
+        const fullInstruction = `${firstPart.name}. ${firstPart.instruction}`;
+        console.log("Lecture de la première instruction:", fullInstruction);
+        speakInstruction(fullInstruction);
+      }, 500);
     }, 30000); // 30 secondes de délai
   };
 
