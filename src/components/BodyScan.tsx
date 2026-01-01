@@ -17,9 +17,13 @@ const bodyParts = [
   { name: "Legs & Feet", duration: 10, instruction: "Relax your thighs, calves, and feet completely" },
 ];
 
-// URL de musique de méditation (musique libre de droits)
-// Alternative: vous pouvez remplacer par votre propre fichier audio dans le dossier public
-const BACKGROUND_MUSIC_URL = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_8b8c1e3f5c.mp3?filename=meditation-music-zen-11157.mp3";
+// URLs de musique de méditation (plusieurs sources de fallback)
+// Alternative: vous pouvez ajouter votre propre fichier audio dans le dossier public et utiliser "/meditation-music.mp3"
+const BACKGROUND_MUSIC_URLS = [
+  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+  "https://archive.org/download/MeditationMusic/MeditationMusic.mp3", // Archive.org - source fiable
+];
 
 export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
   const [isRunning, setIsRunning] = useState(false);
@@ -31,50 +35,214 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const selectedVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<OscillatorNode | null>(null);
 
   const totalDuration = bodyParts.reduce((sum, part) => sum + part.duration, 0);
   const elapsedDuration = bodyParts.slice(0, currentIndex).reduce((sum, part) => sum + part.duration, 0) + 
     (isRunning ? bodyParts[currentIndex]?.duration - timeRemaining : 0);
   const progress = (elapsedDuration / totalDuration) * 100;
 
-  // Fonction pour lire une instruction à voix haute
+  // Sélectionner la meilleure voix disponible
+  const selectBestVoice = () => {
+    if (!('speechSynthesis' in window)) return null;
+    
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) return null;
+    
+    // Prioriser les voix premium/naturelles (Google, Microsoft, etc.)
+    const preferredVoices = [
+      'Google UK English Female',
+      'Google US English Female',
+      'Microsoft Zira - English (United States)',
+      'Microsoft Hazel - English (Great Britain)',
+      'Samantha',
+      'Karen',
+      'Victoria'
+    ];
+    
+    // Chercher une voix préférée
+    for (const preferred of preferredVoices) {
+      const voice = voices.find(v => v.name.includes(preferred));
+      if (voice) return voice;
+    }
+    
+    // Sinon, chercher une voix féminine anglaise
+    const femaleVoice = voices.find(v => 
+      v.lang.startsWith('en') && 
+      (v.name.toLowerCase().includes('female') || 
+       v.name.toLowerCase().includes('woman') ||
+       v.name.toLowerCase().includes('samantha') ||
+       v.name.toLowerCase().includes('karen') ||
+       v.name.toLowerCase().includes('victoria'))
+    );
+    if (femaleVoice) return femaleVoice;
+    
+    // Sinon, prendre la première voix anglaise
+    const englishVoice = voices.find(v => v.lang.startsWith('en'));
+    return englishVoice || voices[0];
+  };
+
+  // Initialiser la voix au chargement
+  useEffect(() => {
+    const loadVoices = () => {
+      selectedVoiceRef.current = selectBestVoice();
+    };
+    
+    loadVoices();
+    // Certains navigateurs chargent les voix de manière asynchrone
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  // Fonction pour lire une instruction à voix haute avec une voix plus naturelle
   const speakInstruction = (text: string) => {
     // Arrêter toute synthèse vocale en cours
-    if (speechSynthesisRef.current) {
-      window.speechSynthesis.cancel();
-    }
+    window.speechSynthesis.cancel();
 
     if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
+      // Recharger les voix si nécessaire
+      if (!selectedVoiceRef.current) {
+        selectedVoiceRef.current = selectBestVoice();
+      }
+      
+      // Améliorer le texte pour une lecture plus naturelle
+      // Remplacer les points par des pauses plus longues
+      const naturalText = text
+        .replace(/\. /g, '. ') // Garder les points mais avec espace
+        .replace(/\s+/g, ' '); // Normaliser les espaces
+      
+      const utterance = new SpeechSynthesisUtterance(naturalText);
       utterance.lang = 'en-US';
-      utterance.rate = 0.9; // Vitesse légèrement ralentie pour la méditation
-      utterance.pitch = 1;
-      utterance.volume = 0.8;
+      utterance.rate = 0.82; // Vitesse ralentie pour la méditation (plus naturel et calme)
+      utterance.pitch = 0.92; // Pitch légèrement plus bas pour un son plus chaleureux et apaisant
+      utterance.volume = 0.95;
+      
+      // Utiliser la meilleure voix disponible
+      if (selectedVoiceRef.current) {
+        utterance.voice = selectedVoiceRef.current;
+        console.log("Utilisation de la voix:", selectedVoiceRef.current.name);
+      }
       
       speechSynthesisRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      
+      // Lire avec un petit délai pour s'assurer que la musique est lancée
+      setTimeout(() => {
+        window.speechSynthesis.speak(utterance);
+      }, 300);
     }
   };
 
-  // Démarrer la musique de fond
-  const startBackgroundMusic = () => {
+  // Démarrer la musique de fond avec fallback sur plusieurs sources
+  const startBackgroundMusic = (sourceIndex = 0) => {
     if (!musicEnabled) return;
     
-    if (!audioRef.current) {
-      audioRef.current = new Audio(BACKGROUND_MUSIC_URL);
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.2; // Volume bas pour ne pas gêner
-      audioRef.current.addEventListener('error', () => {
-        console.log("Impossible de charger la musique de fond. Vous pouvez continuer sans musique.");
-        setMusicEnabled(false);
+    // Si l'audio existe déjà et fonctionne, juste le relancer
+    if (audioRef.current && !audioRef.current.error) {
+      audioRef.current.play().catch((error) => {
+        console.log("Impossible de relancer la musique:", error);
       });
+      return;
     }
     
-    audioRef.current.play().catch((error) => {
-      console.log("Impossible de lire la musique de fond:", error);
-      // Désactiver la musique si elle ne peut pas être lue
-      setMusicEnabled(false);
+    // Si on a épuisé toutes les sources, essayer de générer une musique
+    if (sourceIndex >= BACKGROUND_MUSIC_URLS.length) {
+      console.log("Toutes les sources de musique externes ont échoué. Génération d'une musique de fond...");
+      if (!generateBackgroundMusic()) {
+        console.log("Impossible de générer la musique. Continuez sans musique.");
+        setMusicEnabled(false);
+      }
+      return;
+    }
+    
+    // Créer un nouvel élément audio
+    const audio = new Audio(BACKGROUND_MUSIC_URLS[sourceIndex]);
+    audio.loop = true;
+    audio.volume = 0.3; // Volume bas pour ne pas gêner
+    audio.preload = 'auto';
+    
+    // Quand la musique est prête et peut être jouée
+    audio.addEventListener('canplay', () => {
+      audio.play().catch((error) => {
+        // Erreur de lecture (peut nécessiter une interaction utilisateur)
+        console.log("Lecture de la musique différée:", error);
+      });
     });
+    
+    // Gérer les erreurs de chargement
+    audio.addEventListener('error', (e) => {
+      console.log(`Erreur avec la source ${sourceIndex + 1}, essai de la source suivante...`);
+      // Essayer la source suivante
+      startBackgroundMusic(sourceIndex + 1);
+    });
+    
+    // Quand la musique commence à jouer
+    audio.addEventListener('playing', () => {
+      console.log("Musique de fond démarrée avec succès");
+    });
+    
+    audioRef.current = audio;
+    
+    // Essayer de charger et jouer immédiatement
+    audio.load();
+    audio.play().catch((error) => {
+      // Erreur normale si pas d'interaction utilisateur - la musique se lancera automatiquement
+      console.log("Lecture différée (attente de l'interaction utilisateur)");
+    });
+  };
+
+  // Générer une musique de fond apaisante avec Web Audio API
+  const generateBackgroundMusic = () => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return false;
+      
+      const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
+      
+      // Créer plusieurs oscillateurs pour un son plus riche et apaisant
+      const frequencies = [220, 330, 440]; // Accords apaisants (A, E, A)
+      const oscillators: OscillatorNode[] = [];
+      const gainNodes: GainNode[] = [];
+      
+      frequencies.forEach((freq, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.type = 'sine'; // Son doux
+        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+        
+        // Volume décroissant pour créer une ambiance
+        const volume = 0.03 / (index + 1); // Volume plus bas pour les fréquences plus hautes
+        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+        
+        // Ajouter une légère variation pour éviter la monotonie
+        if (index > 0) {
+          oscillator.frequency.exponentialRampToValueAtTime(
+            freq * 1.01, 
+            audioContext.currentTime + 10
+          );
+        }
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start();
+        oscillators.push(oscillator);
+        gainNodes.push(gainNode);
+      });
+      
+      // Stocker le premier oscillateur pour pouvoir l'arrêter
+      audioSourceRef.current = oscillators[0];
+      
+      console.log("Musique de fond apaisante générée avec Web Audio API");
+      return true;
+    } catch (error) {
+      console.log("Impossible de générer la musique avec Web Audio API:", error);
+      return false;
+    }
   };
 
   // Arrêter la musique de fond
@@ -82,6 +250,14 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+    }
+    if (audioSourceRef.current) {
+      audioSourceRef.current.stop();
+      audioSourceRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
     }
   };
 
