@@ -24,20 +24,22 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-24">
       {/* Hero Section */}
       <div 
-        className="relative h-64 bg-cover bg-center"
+        className="relative h-48 sm:h-56 md:h-64 lg:h-72 bg-cover bg-center"
         style={{ backgroundImage: `url(${heroMorning})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
-        <div className="absolute inset-0 flex flex-col justify-end p-6">
-          <p className="text-sm font-medium text-primary-foreground/80">{formattedDate}</p>
-          <h1 className="text-3xl font-serif font-semibold text-primary-foreground">
-            {greeting}
-          </h1>
+        <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 lg:p-8">
+          <div className="max-w-3xl mx-auto w-full">
+            <p className="text-sm font-medium text-primary-foreground/80">{formattedDate}</p>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-semibold text-primary-foreground">
+              {greeting}
+            </h1>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="px-4 -mt-8 space-y-6">
+      <div className="px-4 sm:px-6 lg:px-8 -mt-8 space-y-6 max-w-3xl mx-auto">
         {/* Daily Quote */}
         <Card className="bg-card/80 backdrop-blur border-primary/20 shadow-lg">
           <CardContent className="p-5">

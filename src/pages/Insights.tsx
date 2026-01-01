@@ -52,16 +52,16 @@ const Insights = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="bg-gradient-to-b from-primary/10 to-background p-6">
-        <div className="flex items-center gap-3 mb-2">
+      <div className="bg-gradient-to-b from-primary/10 to-background p-4 sm:p-6 lg:p-8">
+        <div className="flex items-center gap-3 mb-2 max-w-3xl mx-auto">
           <div className="p-2 bg-primary/20 rounded-xl">
-            <BarChart3 className="h-6 w-6 text-primary" />
+            <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-serif font-semibold text-foreground">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-serif font-semibold text-foreground">
               Your Insights
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Track your mindfulness journey
             </p>
           </div>
@@ -69,7 +69,7 @@ const Insights = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="px-4 -mt-2 grid grid-cols-2 gap-4">
+      <div className="px-4 sm:px-6 lg:px-8 -mt-2 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto">
         <Card className="bg-card/80">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-primary mb-1">
@@ -112,7 +112,7 @@ const Insights = () => {
       </div>
 
       {/* Charts */}
-      <div className="px-4 mt-6 space-y-6">
+      <div className="px-4 sm:px-6 lg:px-8 mt-6 space-y-6 max-w-3xl mx-auto">
         {moodChartData.length > 0 ? (
           <>
             <Card className="bg-card/80">

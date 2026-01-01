@@ -213,20 +213,20 @@ const MorningIntentions = () => {
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div 
-        className="relative h-40 bg-cover bg-center"
+        className="relative h-32 sm:h-40 md:h-48 bg-cover bg-center"
         style={{ backgroundImage: `url(${heroMorning})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background" />
-        <div className="absolute inset-0 flex items-end p-6">
-          <div className="flex items-center gap-3">
+        <div className="absolute inset-0 flex items-end p-4 sm:p-6 lg:p-8">
+          <div className="flex items-center gap-3 max-w-3xl mx-auto w-full">
             <div className="p-2 bg-card/80 backdrop-blur rounded-xl">
-              <Sun className="h-6 w-6 text-primary" />
+              <Sun className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-serif font-semibold text-foreground">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-serif font-semibold text-foreground">
                 Morning Intentions
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Start your day with purpose
               </p>
             </div>
@@ -235,7 +235,7 @@ const MorningIntentions = () => {
       </div>
 
       {/* Progress */}
-      <div className="px-4 pt-4">
+      <div className="px-4 sm:px-6 lg:px-8 pt-4 max-w-3xl mx-auto">
         <ProgressIndicator 
           steps={steps} 
           currentStep={currentStep} 
@@ -244,7 +244,7 @@ const MorningIntentions = () => {
       </div>
 
       {/* Content */}
-      <div className="px-4 py-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-3xl mx-auto">
         <Card className="bg-card/50 border-border/50">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -261,25 +261,25 @@ const MorningIntentions = () => {
       </div>
 
       {/* Navigation Buttons */}
-      <div className="fixed bottom-20 left-0 right-0 px-4">
-        <div className="flex gap-3 max-w-lg mx-auto">
+      <div className="fixed bottom-20 sm:bottom-24 left-0 right-0 px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-2 sm:gap-3 max-w-3xl mx-auto">
           <Button
             variant="outline"
             onClick={prevStep}
             disabled={currentStep === 0}
-            className="flex-1 gap-2"
+            className="flex-1 gap-1 sm:gap-2 text-sm sm:text-base"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            <span className="hidden xs:inline">Back</span>
           </Button>
           
           {currentStep === steps.length - 1 ? (
-            <Button onClick={handleSave} className="flex-1 gap-2">
+            <Button onClick={handleSave} className="flex-1 gap-1 sm:gap-2 text-sm sm:text-base">
               <Check className="h-4 w-4" />
               Complete
             </Button>
           ) : (
-            <Button onClick={nextStep} className="flex-1 gap-2">
+            <Button onClick={nextStep} className="flex-1 gap-1 sm:gap-2 text-sm sm:text-base">
               Next
               <ArrowRight className="h-4 w-4" />
             </Button>
