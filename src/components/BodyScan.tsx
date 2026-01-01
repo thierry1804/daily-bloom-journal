@@ -37,6 +37,12 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
   const audioSourceRef = useRef<OscillatorNode | null>(null);
   const voiceStartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const musicStopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  
+  // Mettre à jour la ref quand onComplete change
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   const totalDuration = bodyParts.reduce((sum, part) => sum + part.duration, 0);
   const elapsedDuration = bodyParts.slice(0, currentIndex).reduce((sum, part) => sum + part.duration, 0) + 
@@ -103,74 +109,131 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
   // Initialiser la voix au chargement
   useEffect(() => {
     const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      console.log("Voix disponibles:", voices.length, voices.map(v => v.name));
       selectedVoiceRef.current = selectBestVoice();
+      if (selectedVoiceRef.current) {
+        console.log("Voix sélectionnée:", selectedVoiceRef.current.name);
+      } else {
+        console.warn("Aucune voix sélectionnée!");
+      }
     };
     
+    // Charger immédiatement
     loadVoices();
+    
     // Certains navigateurs chargent les voix de manière asynchrone
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
+    
+    // Forcer le chargement des voix en faisant un appel à getVoices
+    // Certains navigateurs nécessitent cela
+    setTimeout(() => {
+      window.speechSynthesis.getVoices();
+      loadVoices();
+    }, 100);
   }, []);
 
   // Fonction pour lire une instruction à voix haute avec une voix très humaine et apaisante
-  const speakInstruction = (text: string) => {
+  const speakInstruction = (text: string, force = false) => {
     // Arrêter toute synthèse vocale en cours
     window.speechSynthesis.cancel();
 
-    if ('speechSynthesis' in window) {
-      // Recharger les voix si nécessaire
-      if (!selectedVoiceRef.current) {
-        selectedVoiceRef.current = selectBestVoice();
-      }
-      
-      // Améliorer le texte pour une lecture plus naturelle et apaisante
-      // Ajouter des pauses naturelles pour un rythme plus humain
-      const naturalText = text
-        .replace(/\. /g, '... ') // Pause plus longue après les points
-        .replace(/, /g, '... ')  // Pause après les virgules
-        .replace(/\s+/g, ' ')    // Normaliser les espaces
-        .trim();
-      
-      const utterance = new SpeechSynthesisUtterance(naturalText);
-      utterance.lang = 'en-US';
-      
-      // Paramètres optimisés pour une voix très humaine et apaisante (soothing)
-      utterance.rate = 0.75;  // Vitesse encore plus lente pour un rythme très calme et naturel
-      utterance.pitch = 0.88;  // Pitch plus bas pour un ton très chaleureux et apaisant
-      utterance.volume = 1.0; // Volume maximum pour être sûr que la voix est audible
-      
-      // Utiliser la meilleure voix disponible
-      if (selectedVoiceRef.current) {
-        utterance.voice = selectedVoiceRef.current;
-        console.log("Utilisation de la voix apaisante:", selectedVoiceRef.current.name);
-      } else {
-        console.log("Aucune voix sélectionnée, utilisation de la voix par défaut");
-      }
-      
-      // Baisser le volume de la musique pendant que la voix parle
-      if (audioRef.current) {
-        audioRef.current.volume = 0.1; // Volume très bas pendant la voix
-      }
-      
-      // Remettre le volume de la musique après la fin de la voix
-      utterance.onend = () => {
-        if (audioRef.current) {
-          audioRef.current.volume = 0.3; // Remettre le volume normal
-        }
-      };
-      
-      utterance.onerror = (event) => {
-        console.error("Erreur de synthèse vocale:", event);
-      };
-      
-      speechSynthesisRef.current = utterance;
-      
-      // Lire immédiatement (pas de délai)
-      console.log("Lecture de l'instruction:", naturalText);
-      window.speechSynthesis.speak(utterance);
-    } else {
+    if (!('speechSynthesis' in window)) {
       console.error("La synthèse vocale n'est pas disponible dans ce navigateur");
+      return;
+    }
+
+    // Vérifier que la synthèse vocale n'est pas en cours d'utilisation
+    if (window.speechSynthesis.speaking && !force) {
+      console.log("Synthèse vocale déjà en cours, attente...");
+      setTimeout(() => speakInstruction(text, true), 500);
+      return;
+    }
+
+    // Recharger les voix si nécessaire
+    if (!selectedVoiceRef.current) {
+      selectedVoiceRef.current = selectBestVoice();
+    }
+    
+    // Améliorer le texte pour une lecture plus naturelle et apaisante
+    // Ajouter des pauses naturelles pour un rythme plus humain
+    const naturalText = text
+      .replace(/\. /g, '... ') // Pause plus longue après les points
+      .replace(/, /g, '... ')  // Pause après les virgules
+      .replace(/\s+/g, ' ')    // Normaliser les espaces
+      .trim();
+    
+    if (!naturalText) {
+      console.error("Texte vide, impossible de lire");
+      return;
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(naturalText);
+    utterance.lang = 'en-US';
+    
+    // Paramètres optimisés pour une voix très humaine et apaisante (soothing)
+    utterance.rate = 0.75;  // Vitesse encore plus lente pour un rythme très calme et naturel
+    utterance.pitch = 0.88;  // Pitch plus bas pour un ton très chaleureux et apaisant
+    utterance.volume = 1.0; // Volume maximum pour être sûr que la voix est audible
+    
+    // Utiliser la meilleure voix disponible
+    if (selectedVoiceRef.current) {
+      utterance.voice = selectedVoiceRef.current;
+      console.log("Utilisation de la voix apaisante:", selectedVoiceRef.current.name);
+    } else {
+      console.log("Aucune voix sélectionnée, utilisation de la voix par défaut");
+    }
+    
+    // Baisser le volume de la musique pendant que la voix parle
+    if (audioRef.current) {
+      audioRef.current.volume = 0.1; // Volume très bas pendant la voix
+    }
+    
+    // Remettre le volume de la musique après la fin de la voix
+    utterance.onend = () => {
+      console.log("Lecture vocale terminée");
+      if (audioRef.current) {
+        audioRef.current.volume = 0.3; // Remettre le volume normal
+      }
+      
+      // Si c'est le dernier message (body scan completed), arrêter la musique après 30 secondes
+      if (text.includes("Body scan completed")) {
+        console.log("Dernier guide vocal terminé, arrêt de la musique dans 30 secondes");
+        // Nettoyer le timeout précédent s'il existe
+        if (musicStopTimeoutRef.current) {
+          clearTimeout(musicStopTimeoutRef.current);
+        }
+        // Arrêter la musique 30 secondes après la fin du dernier guide vocal
+        musicStopTimeoutRef.current = setTimeout(() => {
+          console.log("Arrêt de la musique 30 secondes après la fin du guide vocal");
+          stopBackgroundMusic();
+          onCompleteRef.current();
+        }, 30000); // 30 secondes après la fin du guide vocal
+      }
+    };
+    
+    utterance.onstart = () => {
+      console.log("Lecture vocale démarrée");
+    };
+    
+    utterance.onerror = (event) => {
+      console.error("Erreur de synthèse vocale:", event.error, event);
+      if (audioRef.current) {
+        audioRef.current.volume = 0.3; // Remettre le volume en cas d'erreur
+      }
+    };
+    
+    speechSynthesisRef.current = utterance;
+    
+    // Lire immédiatement
+    console.log("Tentative de lecture de l'instruction:", naturalText);
+    try {
+      window.speechSynthesis.speak(utterance);
+      console.log("Commande de lecture envoyée à la synthèse vocale");
+    } catch (error) {
+      console.error("Erreur lors de l'appel à speak:", error);
     }
   };
 
@@ -194,31 +257,48 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
     audio.volume = 0.3; // Volume bas pour ne pas gêner
     audio.preload = 'auto';
     
-    // Quand la musique est prête et peut être jouée
-    audio.addEventListener('canplay', () => {
-      audio.play().catch((error) => {
-        console.log("Lecture de la musique différée:", error);
-      });
-    });
+    // Stocker les handlers pour pouvoir les retirer plus tard
+    const canPlayHandler = () => {
+      // Ne jouer que si la musique est toujours activée et n'a pas été arrêtée
+      if (musicEnabled && audioRef.current === audio) {
+        audio.play().catch((error) => {
+          console.log("Lecture de la musique différée:", error);
+        });
+      }
+    };
     
-    // Gérer les erreurs de chargement
-    audio.addEventListener('error', (e) => {
+    const errorHandler = (e: Event) => {
       console.log("Erreur de chargement de la musique:", e);
       setMusicEnabled(false);
       setIsMusicPlaying(false);
-    });
+    };
     
-    // Quand la musique commence à jouer
-    audio.addEventListener('playing', () => {
-      console.log("Musique de fond démarrée avec succès");
-      setIsMusicPlaying(true);
-    });
+    const playingHandler = () => {
+      // Ne loguer que si c'est bien notre audio
+      if (audioRef.current === audio) {
+        console.log("Musique de fond démarrée avec succès");
+        setIsMusicPlaying(true);
+      }
+    };
     
-    // Quand la musique se termine
-    audio.addEventListener('ended', () => {
-      console.log("Musique terminée");
-      setIsMusicPlaying(false);
-    });
+    const endedHandler = () => {
+      if (audioRef.current === audio) {
+        console.log("Musique terminée");
+        setIsMusicPlaying(false);
+      }
+    };
+    
+    // Ajouter les event listeners
+    audio.addEventListener('canplay', canPlayHandler);
+    audio.addEventListener('error', errorHandler);
+    audio.addEventListener('playing', playingHandler);
+    audio.addEventListener('ended', endedHandler);
+    
+    // Stocker les handlers sur l'élément audio pour pouvoir les retirer
+    (audio as any)._canPlayHandler = canPlayHandler;
+    (audio as any)._errorHandler = errorHandler;
+    (audio as any)._playingHandler = playingHandler;
+    (audio as any)._endedHandler = endedHandler;
     
     audioRef.current = audio;
     
@@ -294,22 +374,77 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
     }
   };
 
-  // Arrêter la musique de fond
-  const stopBackgroundMusic = () => {
+  // Arrêter la musique de fond avec un fade-out progressif
+  const stopBackgroundMusic = (fadeOutDuration = 2000) => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
+      const audio = audioRef.current;
+      const startVolume = audio.volume;
+      const fadeOutSteps = 20; // Nombre d'étapes pour le fade-out
+      const stepDuration = fadeOutDuration / fadeOutSteps;
+      const volumeStep = startVolume / fadeOutSteps;
+      
+      console.log("Début du fade-out de la musique");
+      
+      // Fonction pour diminuer progressivement le volume
+      const fadeOut = () => {
+        if (!audioRef.current || audioRef.current !== audio) {
+          return; // La musique a déjà été arrêtée
+        }
+        
+        const currentVolume = audio.volume;
+        if (currentVolume > 0) {
+          // Diminuer le volume
+          audio.volume = Math.max(0, currentVolume - volumeStep);
+          
+          // Continuer le fade-out
+          setTimeout(fadeOut, stepDuration);
+        } else {
+          // Volume à 0, arrêter complètement
+          console.log("Fade-out terminé, arrêt définitif de la musique");
+          
+          // Retirer tous les event listeners pour éviter qu'ils se déclenchent après l'arrêt
+          if ((audio as any)._canPlayHandler) {
+            audio.removeEventListener('canplay', (audio as any)._canPlayHandler);
+          }
+          if ((audio as any)._errorHandler) {
+            audio.removeEventListener('error', (audio as any)._errorHandler);
+          }
+          if ((audio as any)._playingHandler) {
+            audio.removeEventListener('playing', (audio as any)._playingHandler);
+          }
+          if ((audio as any)._endedHandler) {
+            audio.removeEventListener('ended', (audio as any)._endedHandler);
+          }
+          
+          // Arrêter et nettoyer
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = ''; // Vider la source pour empêcher tout redémarrage
+          audioRef.current = null;
+          setIsMusicPlaying(false);
+        }
+      };
+      
+      // Démarrer le fade-out
+      fadeOut();
     }
+    
+    // Pour la musique générée avec Web Audio API, arrêt simple
+    // (Le fade-out complexe nécessiterait de refactoriser la génération de musique)
     if (audioSourceRef.current) {
       audioSourceRef.current.stop();
       audioSourceRef.current = null;
     }
+    
     if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
+      // Attendre un peu avant de fermer le contexte audio
+      setTimeout(() => {
+        if (audioContextRef.current) {
+          audioContextRef.current.close().catch(() => {});
+          audioContextRef.current = null;
+        }
+      }, fadeOutDuration + 100);
     }
-    setIsMusicPlaying(false);
   };
 
   // Nettoyer les ressources audio
@@ -342,23 +477,15 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
           setCurrentIndex(i => i + 1);
           return bodyParts[currentIndex + 1].duration;
         } else {
-          // Fin du body scan - continuer la musique 30 secondes de plus
+          // Fin du body scan - le dernier guide vocal sera lu et déclenchera l'arrêt de la musique
           setIsRunning(false);
           setIsComplete(true);
           
           // Lire le message de fin
+          // Le timer de 30 secondes sera déclenché dans utterance.onend de speakInstruction
           setTimeout(() => {
             speakInstruction("Body scan completed. Take a moment to notice how you feel.");
           }, 500);
-          
-          // Arrêter la musique après 30 secondes supplémentaires
-          if (musicStopTimeoutRef.current) {
-            clearTimeout(musicStopTimeoutRef.current);
-          }
-          musicStopTimeoutRef.current = setTimeout(() => {
-            stopBackgroundMusic();
-            onComplete();
-          }, 30000); // 30 secondes après la fin
           
           return 0;
         }
@@ -369,6 +496,48 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
   }, [isRunning, currentIndex, onComplete]);
 
   const start = () => {
+    // Vérifier que la synthèse vocale est disponible
+    if (!('speechSynthesis' in window)) {
+      console.error("La synthèse vocale n'est pas disponible!");
+      alert("La synthèse vocale n'est pas disponible dans votre navigateur. Veuillez utiliser Chrome, Edge ou Safari.");
+      return;
+    }
+    
+    // S'assurer que les voix sont chargées
+    const voices = window.speechSynthesis.getVoices();
+    console.log("Voix disponibles au démarrage:", voices.length);
+    if (voices.length === 0) {
+      console.warn("Aucune voix disponible, attente du chargement...");
+      // Attendre que les voix se chargent
+      const checkVoices = setInterval(() => {
+        const newVoices = window.speechSynthesis.getVoices();
+        if (newVoices.length > 0) {
+          clearInterval(checkVoices);
+          selectedVoiceRef.current = selectBestVoice();
+          console.log("Voix chargées:", newVoices.length);
+        }
+      }, 100);
+      
+      setTimeout(() => clearInterval(checkVoices), 5000); // Timeout après 5 secondes
+    } else {
+      selectedVoiceRef.current = selectBestVoice();
+    }
+    
+    // Tester la synthèse vocale immédiatement pour "activer" l'API
+    // Cela permet de contourner les restrictions du navigateur
+    try {
+      const testUtterance = new SpeechSynthesisUtterance('Test');
+      testUtterance.volume = 0.01; // Très bas mais pas 0
+      testUtterance.rate = 10; // Très rapide
+      testUtterance.onstart = () => {
+        window.speechSynthesis.cancel(); // Annuler immédiatement
+        console.log("Test de synthèse vocale réussi - API activée");
+      };
+      window.speechSynthesis.speak(testUtterance);
+    } catch (error) {
+      console.error("Erreur lors du test de synthèse vocale:", error);
+    }
+    
     // Démarrer la musique immédiatement
     startBackgroundMusic();
     setEyesClosed(true);
@@ -384,15 +553,8 @@ export const BodyScan = ({ onComplete, completed }: BodyScanProps) => {
       setIsWaitingForVoice(false);
       setCurrentIndex(0);
       setTimeRemaining(bodyParts[0].duration);
+      // setIsRunning(true) déclenchera automatiquement le useEffect qui lira la première instruction
       setIsRunning(true);
-      
-      // Lire la première instruction immédiatement après le délai
-      setTimeout(() => {
-        const firstPart = bodyParts[0];
-        const fullInstruction = `${firstPart.name}. ${firstPart.instruction}`;
-        console.log("Lecture de la première instruction:", fullInstruction);
-        speakInstruction(fullInstruction);
-      }, 500);
     }, 30000); // 30 secondes de délai
   };
 
