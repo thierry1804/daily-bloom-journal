@@ -13,12 +13,20 @@ import { BreathingExercise } from "@/components/BreathingExercise";
 import { BodyScan } from "@/components/BodyScan";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { saveMorningEntry, getTodaysMorningEntry, generateId, type MorningEntry } from "@/lib/storage";
+import { useSEO } from "@/hooks/useSEO";
 import heroMorning from "@/assets/hero-morning.jpg";
 import { toast } from "@/hooks/use-toast";
 
 const steps = ["Mood", "Sleep", "Feelings", "Goals", "Gratitude", "Affirmation", "Grounding"];
 
 const MorningIntentions = () => {
+  useSEO({
+    title: "Morning Intentions - Daily Bloom Journal",
+    description: "Start your day with purpose. Set your morning intentions, track your mood, sleep quality, and practice gratitude with Daily Bloom Journal.",
+    keywords: "morning routine, morning intentions, mindfulness, gratitude practice, daily journal, morning meditation, wellness journal",
+    ogImage: "https://daily-bloom-journal.vercel.app/images/splash.jpeg",
+    canonical: "https://daily-bloom-journal.vercel.app/morning",
+  });
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);

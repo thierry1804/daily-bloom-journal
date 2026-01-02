@@ -9,12 +9,20 @@ import { MoodSelector } from "@/components/MoodSelector";
 import { DayRating } from "@/components/DayRating";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { saveEveningEntry, getTodaysEveningEntry, generateId, type EveningEntry } from "@/lib/storage";
+import { useSEO } from "@/hooks/useSEO";
 import heroEvening from "@/assets/hero-evening.jpg";
 import { toast } from "@/hooks/use-toast";
 
 const steps = ["Day Rating", "End Mood", "Joys", "Learnings", "Tomorrow", "Final Thoughts"];
 
 const EveningReflection = () => {
+  useSEO({
+    title: "Evening Reflection - Daily Bloom Journal",
+    description: "Close your day with gratitude. Reflect on your day, capture moments of joy, learnings, and set intentions for tomorrow with Daily Bloom Journal.",
+    keywords: "evening reflection, daily reflection, gratitude journal, evening routine, mindfulness practice, self-reflection, wellness journal",
+    ogImage: "https://daily-bloom-journal.vercel.app/images/splash.jpeg",
+    canonical: "https://daily-bloom-journal.vercel.app/evening",
+  });
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);

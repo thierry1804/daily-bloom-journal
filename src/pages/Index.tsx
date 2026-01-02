@@ -4,9 +4,37 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Navigation } from "@/components/Navigation";
 import { getTodaysMorningEntry, getTodaysEveningEntry } from "@/lib/storage";
+import { useSEO } from "@/hooks/useSEO";
+import { useStructuredData } from "@/hooks/useStructuredData";
 import heroMorning from "@/assets/hero-morning.jpg";
 
 const Index = () => {
+  useSEO({
+    title: "Daily Bloom Journal - Daily Mindfulness Journal",
+    description: "Cultivate your daily well-being with Daily Bloom Journal. A mindfulness journal to track your morning intentions, evening reflections, mood, and gratitude.",
+    keywords: "journal, mindfulness, well-being, gratitude, daily reflection, meditation, self-care, mental health, wellness",
+    ogImage: "https://daily-bloom-journal.vercel.app/images/splash.jpeg",
+    canonical: "https://daily-bloom-journal.vercel.app/",
+  });
+
+  useStructuredData({
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Daily Bloom Journal",
+    "description": "Cultivate your daily well-being with Daily Bloom Journal. A mindfulness journal to track your morning intentions, evening reflections, mood, and gratitude.",
+    "url": "https://daily-bloom-journal.vercel.app",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "HayThi.mg"
+    }
+  });
   const morningDone = !!getTodaysMorningEntry();
   const eveningDone = !!getTodaysEveningEntry();
   

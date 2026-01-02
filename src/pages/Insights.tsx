@@ -3,6 +3,7 @@ import { BarChart3, TrendingUp, Calendar, Heart, Moon, Sun } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navigation } from "@/components/Navigation";
 import { getJournalData } from "@/lib/storage";
+import { useSEO } from "@/hooks/useSEO";
 import {
   ChartContainer,
   ChartTooltip,
@@ -11,6 +12,13 @@ import {
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar } from "recharts";
 
 const Insights = () => {
+  useSEO({
+    title: "Your Insights - Daily Bloom Journal",
+    description: "Track your mindfulness journey with detailed insights. View your mood trends, sleep patterns, and daily ratings to understand your well-being over time.",
+    keywords: "mindfulness insights, mood tracking, sleep tracking, wellness analytics, journal insights, mental health tracking, self-awareness",
+    ogImage: "https://daily-bloom-journal.vercel.app/images/splash.jpeg",
+    canonical: "https://daily-bloom-journal.vercel.app/insights",
+  });
   const { morningEntries, eveningEntries } = getJournalData();
 
   const stats = useMemo(() => {
